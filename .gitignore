@@ -1,0 +1,18 @@
+# 真实凭证 / 个人配置(.example.sh 是公开模板,无 .example 后缀的是真实值)
+adapters/*/config.sh
+!adapters/*/config.example.sh
+
+# 运行时产物
+logs/
+*.log
+*.pid
+
+# 老脚本临时残留(将被删除)
+scripts/
+
+# 系统/编辑器
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
