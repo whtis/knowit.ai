@@ -1,5 +1,7 @@
 # knowit.ai
 
+[English](README.md) · **中文**
+
 > 你的零散规则塞进 markdown,IM 里随时问"我现在该 X 不"——LLM 给推荐。
 >
 > **🟢 用你 Claude.ai Pro/Max 订阅额度跑,不烧一分 API token。** 100 行 shell。
