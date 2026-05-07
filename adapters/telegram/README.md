@@ -1,10 +1,10 @@
 # Telegram Adapter (TODO)
 
-占位。海外用户首选。
+Stub. The natural choice for users outside mainland China.
 
-## 实现思路
+## Implementation sketch
 
-最小依赖版本(纯 bash + curl):
+Minimal-deps version (pure bash + curl):
 
 ```
 listen.sh:
@@ -18,8 +18,9 @@ listen.sh:
       NEXT = update.update_id + 1
 ```
 
-或者用 `python-telegram-bot` 库,几十行就够。
+Or use the `python-telegram-bot` library — a few dozen lines is plenty.
 
-## 想做的话
+## Want to build it?
 
-PR welcome。骨架照 `adapters/lark/listen.sh` 抄,把 lark-cli 的两步换成 telegram API。
+PRs welcome. Copy `adapters/lark/listen.sh` as the skeleton; swap the two
+`lark-cli` calls for the Telegram API equivalents.

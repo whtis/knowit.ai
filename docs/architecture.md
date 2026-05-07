@@ -1,70 +1,72 @@
-# 架构
+# Architecture
 
-三层,严格解耦。每层的输入/输出是文本,中间没有 schema 协议——LLM 自己处理结构。
+Three layers, strictly decoupled. The interface between each layer is plain
+text — there's no schema protocol in the middle, the LLM handles structure
+itself.
 
-## 全图
+## Big picture
 
 ```
                 ┌─────────────────────────────────────────────┐
-                │  IM 平台:飞书 / Telegram / Discord / ...  │
-                │           (用户在手机上发消息)            │
+                │  IM platform: Feishu / Telegram / Discord  │
+                │           (user sends a message)            │
                 └───────────────────────┬─────────────────────┘
-                                        │ 消息事件
+                                        │ message event
                                         ▼
    ┌─────────────────────────────────────────────────────────┐
-   │ Adapter 层 — adapters/<platform>/listen.sh              │
-   │   职责:把 IM 协议拍平成 (question, reply_handle)        │
-   │   不知道什么 domain,不懂业务,只搬运消息                │
+   │ Adapter layer — adapters/<platform>/listen.sh           │
+   │   Job: flatten the IM protocol into (question, reply)   │
+   │   Doesn't know the domain. Doesn't know the business.   │
    └────────────────────────┬────────────────────────────────┘
-                            │ ./core/ask.sh "问题"
+                            │ ./core/ask.sh "question"
                             ▼
    ┌─────────────────────────────────────────────────────────┐
    │ Core — core/ask.sh                                      │
-   │   职责:拼好 system prompt + 限定工具 + 执行 claude -p   │
-   │   通用,不绑定 domain,不绑定平台                       │
+   │   Job: assemble system prompt, lock down tools,         │
+   │        invoke `claude -p`. Generic. No platform / domain│
    └────────────────────────┬────────────────────────────────┘
                             │ Read / Glob / Grep
                             ▼
    ┌─────────────────────────────────────────────────────────┐
-   │ Knowledge — markdown 文件(用户自己的)                  │
-   │   每条规则一个 .md,frontmatter 结构化 + 正文自由文本    │
-   │   推荐放 Obsidian/iCloud,跨设备同步                    │
+   │ Knowledge — your markdown files                         │
+   │   One rule per .md, frontmatter for structure +         │
+   │   freeform body. Drop in Obsidian / iCloud for sync.    │
    └─────────────────────────────────────────────────────────┘
                             ▲
-                            │ 配套 system prompt
+                            │ paired system prompt
                             │
    ┌─────────────────────────────────────────────────────────┐
    │ Domain — examples/<name>/                               │
-   │   _template.md  : 知识库 schema(空)                    │
-   │   _example.md   : 一条样例数据                          │
-   │   system-prompt.md: 教 LLM 怎么读 schema、用什么口吻回答 │
+   │   _template.md     : empty schema                       │
+   │   _example.md      : one filled-in sample row           │
+   │   system-prompt.md : how the LLM should read & reply    │
    └─────────────────────────────────────────────────────────┘
 ```
 
-## 各层"边界"
+## What each layer knows
 
-| 层 | 知道什么 | 不知道什么 |
-|----|---------|----------|
-| Adapter | 平台协议(消息怎么收发) | 用户在问什么、知识库长啥样 |
-| Core | claude CLI 的调用约定、通用回复风格 | 具体平台、具体 domain |
-| Domain (system-prompt) | schema 字段含义、回答规则、风控提醒 | 用户消息怎么来、答案怎么回 |
-| Knowledge (md files) | 真实事实数据 | 怎么被查询、答案给谁看 |
+| Layer | Knows | Doesn't know |
+|-------|-------|--------------|
+| Adapter | Platform protocol (how to send/receive) | What the user is asking, what the KB looks like |
+| Core | `claude` CLI calling convention, common reply style | Specific platform, specific domain |
+| Domain (system-prompt) | Schema fields, answer rules, risk warnings | How user messages arrive, where answers go |
+| Knowledge (md files) | Real-world facts | How they get queried, who reads the answer |
 
-## 为什么不用 Agent SDK / LangChain
+## Why not Agent SDK / LangChain
 
-- 这套需求 RAG 极简(grep + read 就够),不需要 vector store
-- Claude.ai 订阅可以喂给 `claude -p`,**零 token 成本**;Agent SDK 强制按 token 付费
-- 100 行 bash 替代了一个 Python 服务,运维负担也低
+- The RAG need here is trivial (grep + read is enough). No vector store required.
+- A Claude.ai subscription can power `claude -p` — **zero token cost**. Agent SDK forces per-token billing.
+- ~100 lines of bash replace a Python service. Lower ops burden.
 
-## 为什么 markdown 不上数据库
+## Why markdown, not a database
 
-- 跨设备同步开箱即用(Obsidian/iCloud/Dropbox)
-- 手机上能直接编辑(知识库不只机器人在读,人也在读)
-- diff/git 友好,改了什么一目了然
-- LLM 对 markdown frontmatter 理解极好,无需任何额外解析层
+- Cross-device sync is built in (Obsidian / iCloud / Dropbox)
+- You can edit the KB on your phone (humans read it too, not just the bot)
+- Diff/git friendly — you can see what changed at a glance
+- LLMs handle markdown frontmatter natively, no extra parsing layer
 
-## 限制
+## Limitations
 
-- 单用户场景。多用户要在 adapter 层加路由,在 core 层加身份隔离。
-- LLM 推理延迟 5-15 秒(`claude -p` 冷启)。秒回的 IM 体验不行,换成 IDE 内嵌或 streaming 输出会好。
-- 知识库需要人工维护(或 cron 抓取脚本辅助),LLM 本身不会主动发现"我有张新卡"。
+- **Single user.** Multi-user means routing in the adapter and identity isolation in core.
+- **Latency 5–15s** per question (`claude -p` cold start). Not the snappy IM feel — better suited as IDE-embedded or with streaming output.
+- **Manual KB upkeep.** The LLM doesn't proactively notice "there's a new card" — pair with a cron-driven fetcher (see [`automation.md`](automation.md)) if you want push-style updates.

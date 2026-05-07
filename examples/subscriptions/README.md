@@ -1,19 +1,22 @@
-# 示例 domain:订阅管家
+# Domain example: subscription tracker
 
-证明这套架构不只能做信用卡——同样的范式套到订阅追踪上,几乎无改动。
+Proves the architecture isn't just a credit-card thing — the same pattern
+applies to subscription tracking with almost no changes.
 
-## 典型问题
+## Typical questions
 
-- "本月还有哪些订阅要扣费?"
-- "我有没有重复订阅?"
-- "哪个订阅该退了?"(基于 `usage_score`)
-- "Netflix 怎么退订?"(返回 `cancel_url`)
+- "What's billing me this month?"
+- "Do I have duplicate subscriptions?"
+- "Which one should I cancel?" (based on `usage_score`)
+- "How do I cancel Netflix?" (returns `cancel_url`)
 
-## 关联其他 domain
+## Cross-domain ties
 
-`payment` 字段指向 `cards/` domain 里的卡名——多 domain 联合查询的雏形。
-比如未来支持"我招行 YOUNG 卡上挂着哪些订阅"这种跨集合问题。
+The `payment` field references a card name from the `cards/` domain — the seed
+of multi-domain queries. Future support for *"which subscriptions are charged
+to my Young card?"* lives here.
 
-## 状态
+## Status
 
-模板 + 一个示例条目。如果你 fork 了这个仓库,这是另一个可以直接 plug-in 的 domain。
+Schema + one example row. If you fork this repo, this is a drop-in domain you
+can use as-is.

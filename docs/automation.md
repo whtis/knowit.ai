@@ -1,39 +1,43 @@
-# 自动化(可选)
+# Automation (optional)
 
-LLM 是被动的,你问它才答。这一层让它主动:**定时跑一个 agent,把外部世界的变化
-回写到你的 markdown 知识库**。
+The LLM is reactive — it answers when you ask. This optional layer makes it
+proactive: **a scheduled agent that watches the outside world and writes
+updates back into your markdown knowledge base.**
 
-## 例子:每周抓信用卡新活动
+## Example: weekly credit-card promo crawl
 
 ```bash
-# crontab 或 launchd
+# crontab or launchd
 0 9 * * 1 cd ~/path/to/repo && claude -p \
   --append-system-prompt "$(cat docs/automation/cards-fetch-prompt.md)" \
   --allowed-tools Read Edit WebFetch \
   --add-dir "$KNOWLEDGE_DIR" \
-  -- "扫一遍 cards/ 里每张卡的官网活动页,把没记录过的新活动追加到对应 md 的'当前活动' section,打 #new tag"
+  -- "Sweep each bank's official promo page, append any unrecorded promos to the matching card's '## Current promos' section, tag #new."
 ```
 
-system prompt 里告诉它每张卡的官方活动页 URL。它会:
-- WebFetch 拉每个 URL
-- Grep 现有 md 里的活动列表去重
-- Edit 追加新活动 + `#new` 标签
+The system prompt embeds the per-card promo URLs. The agent will:
 
-你周一早上扫一眼 Obsidian 看 `#new` tag 就行。
+- `WebFetch` each URL
+- `Grep` the existing markdown to dedupe against past promos
+- `Edit` to append new entries with a `#new` tag
 
-## 为什么不让 IM bot 自己干
+You glance at the `#new` tag in Obsidian on Monday morning. That's the loop.
 
-Adapter 是被动的(等 user 消息),做不了 cron。**这是不同的 entry point**,跟 ask
-共用 knowledge layer 但走不同的执行路径。
+## Why doesn't the IM bot do this itself
 
-## 安全
+Adapters are passive — they wait for user messages, they don't run on cron.
+**Automation is a separate entry point.** It shares the knowledge layer with the
+ask path but uses a different execution route (write privileges, broader tools).
 
-- 给定时 agent **更宽**的工具权限(Edit / WebFetch),所以只让它操作 `KNOWLEDGE_DIR`,
-  绝对不要 `--add-dir $HOME`。
-- 写死 URL 列表(`docs/automation/cards-urls.txt`),不让 LLM 自由上网,降低 prompt
-  injection 风险。
+## Security
 
-## 状态
+- The scheduled agent gets **broader** tool access (`Edit`, `WebFetch`), so
+  scope it tightly: pass `--add-dir "$KNOWLEDGE_DIR"`, never `--add-dir $HOME`.
+- Hardcode the URL list (e.g. `docs/automation/cards-urls.txt`) instead of
+  letting the LLM discover URLs freely. Limits prompt-injection blast radius.
 
-模板/思路在这,具体 prompt 文件 `docs/automation/cards-fetch-prompt.md` 还没写,
-有需要再加。
+## Status
+
+This file documents the pattern. The concrete fetcher prompt
+(`docs/automation/cards-fetch-prompt.md`) isn't checked in yet — add it when
+you actually need it.

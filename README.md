@@ -43,8 +43,7 @@ IM platform ─► adapters/<platform>/ ─► core/ask.sh ─► claude -p ─�
                               examples/<domain>/system-prompt.md
 ```
 
-Deeper architectural notes (currently Chinese-only):
-[`docs/architecture.md`](docs/architecture.md).
+More in [`docs/architecture.md`](docs/architecture.md).
 
 ## 5-minute setup
 
