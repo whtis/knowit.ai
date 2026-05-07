@@ -1,115 +1,127 @@
 # knowit.ai
 
-> 你的零散规则塞进 markdown,IM 里随时问"我现在该 X 不"——LLM 给推荐。
+**English** · [中文](README.zh.md)
+
+> Stash your scattered rules into markdown. From any IM, ask *"should I X right now?"* — get an LLM-powered recommendation.
 >
-> **🟢 用你 Claude.ai Pro/Max 订阅额度跑,不烧一分 API token。** 100 行 shell。
+> **🟢 Powered by your Claude.ai Pro/Max subscription. Zero API tokens.** ~100 lines of shell.
 
-## 为什么订阅就能用
+## Why subscription works
 
-我们没用 Anthropic API,也没用 Claude Agent SDK(它强制 API 计费)。直接调
-本地的 `claude -p` 命令——也就是 [Claude Code CLI](https://docs.claude.com/code)
-跑非交互模式。Claude Code CLI 支持登录你的 Claude.ai 账号,所以每次 `claude -p`
-吃的是**你订阅里的对话额度**,跟你在网页/手机 app 聊天一样的池子。
+We don't use the Anthropic API or the Claude Agent SDK (which forces per-token
+billing). We invoke `claude -p` directly — the
+[Claude Code CLI](https://docs.claude.com/code) in non-interactive mode.
+Claude Code CLI reuses your Claude.ai login, so each call draws from **the same
+conversation quota you already pay for** with Pro/Max.
 
-代价:需要一台常驻机器(Mac、Linux、便宜小主机都行)能跑 `claude` 命令。
-个人单机用基本不要钱。**如果你想做成给别人用的 SaaS,就不能这么干**——
-Anthropic 明确禁止第三方 redistribute claude.ai 登录,得切回 API key 计费。
+The trade-off: you need an always-on machine (Mac, Linux, a cheap mini-PC) that
+can run the `claude` command. Personal single-user use is essentially free.
+**You cannot turn this into a SaaS for other people** — Anthropic explicitly
+forbids third parties from redistributing claude.ai login; that path requires
+switching to API key billing.
 
-## 这是什么
+## What this is
 
-一个**模板**,不是产品。展示一种很简单但还没什么人写的范式:
+A **template**, not a product. It demonstrates a simple but underexplored pattern:
 
-- 你的零散规则(信用卡返现、订阅扣费、家电保修...)放进 markdown,带 frontmatter
-- 一个常驻 IM 机器人,问它就给推荐
-- LLM 用的是 **Claude Code CLI**(走 Pro/Max 订阅,不烧 API token)
-- 跨设备同步靠 Obsidian/iCloud,手机也能改
+- Your scattered rules (credit card cashback, recurring subscriptions, appliance warranties...) live in markdown with frontmatter
+- A long-running IM bot answers point-in-time questions like "what should I do?"
+- The LLM is **Claude Code CLI** (uses Pro/Max subscription, no API tokens)
+- Cross-device sync via Obsidian / iCloud — phone-editable
 
-第一个跑通的 domain 是"信用卡决策"——"我现在 200 块超市消费,刷哪张卡返现最高"。
-但同样的范式可以套到任何"我有零散规则,想随时被推荐最优解"的领域。
+The first working domain is **credit card decisions** — *"I'm about to spend $30
+at the supermarket on a Sunday, which card maximizes cashback?"*. The same
+pattern fits anything where you have scattered rules and want point-in-time
+recommendations.
 
-## 三层架构
+## Three-layer architecture
 
 ```
-IM 平台 ─► adapters/<platform>/  ─► core/ask.sh ─► claude -p ─► markdown 知识库
-                                       ▲
-                                       │
-                            examples/<domain>/system-prompt.md
+IM platform ─► adapters/<platform>/ ─► core/ask.sh ─► claude -p ─► markdown KB
+                                          ▲
+                                          │
+                              examples/<domain>/system-prompt.md
 ```
 
-详见 [`docs/architecture.md`](docs/architecture.md)。
+Deeper architectural notes (currently Chinese-only):
+[`docs/architecture.md`](docs/architecture.md).
 
-## 5 分钟跑起来
+## 5-minute setup
 
-### 1. 装好依赖
+### 1. Dependencies
 
-- macOS / Linux,bash + jq
-- [Claude Code CLI](https://docs.claude.com/code) 已登录(`claude` 能跑就行)
-- [`@larksuite/cli`](https://www.npmjs.com/package/@larksuite/cli)(只用 lark adapter 时)
+- macOS / Linux, bash + jq
+- [Claude Code CLI](https://docs.claude.com/code), logged in (you can run `claude`)
+- [`@larksuite/cli`](https://www.npmjs.com/package/@larksuite/cli) (only for the Lark adapter)
 
-### 2. 先用 stdin REPL 玩玩,不接 IM
+### 2. Try the stdin REPL — no IM platform required
 
 ```bash
 git clone https://github.com/whtis/knowit.ai && cd knowit.ai
 ./adapters/stdin/repl.sh --domain cards
-> 周末超市消费 200 块,刷哪张卡划算
-# 直接打印 LLM 回答
+> Should I use my Young card at the supermarket this weekend, $30?
+# LLM answer prints directly
 ```
 
-(此时知识库就是仓库自带的 `examples/cards/_example.md`,只用来 demo)
+(Knowledge base here is the bundled `examples/cards/_example.md` — for demo only.)
 
-### 3. 接你自己的真知识库
+### 3. Point at your own knowledge base
 
 ```bash
 mkdir -p ~/Documents/notes/cards
-cp examples/cards/_template.md ~/Documents/notes/cards/招行-young.md
-# 填字段...
+cp examples/cards/_template.md ~/Documents/notes/cards/cmb-young.md
+# fill the fields...
 
 ./adapters/stdin/repl.sh \
   --knowledge-dir ~/Documents/notes/cards \
   --system-prompt examples/cards/system-prompt.md
 ```
 
-### 4. 接飞书
+### 4. Wire it to Feishu / Lark
 
 ```bash
 cd adapters/lark
 cp config.example.sh config.sh
-# 编辑 config.sh,填 MY_OPEN_ID / KNOWLEDGE_DIR / SYSTEM_PROMPT
+# edit config.sh: MY_OPEN_ID / KNOWLEDGE_DIR / SYSTEM_PROMPT
 ./listen.sh
 ```
 
-详见 [`adapters/lark/README.md`](adapters/lark/README.md)。
+See [`adapters/lark/README.md`](adapters/lark/README.md).
 
-## 已有 domain
+## Built-in domains
 
-- [`examples/cards/`](examples/cards/) — 信用卡决策
-- [`examples/subscriptions/`](examples/subscriptions/) — 订阅追踪
+- [`examples/cards/`](examples/cards/) — credit card decisions
+- [`examples/subscriptions/`](examples/subscriptions/) — subscription tracking
 
-加新 domain 见 [`examples/README.md`](examples/README.md)——三个文件搞定。
+Adding a new domain is three files. See [`examples/README.md`](examples/README.md).
 
-## 已有 adapter
+## Built-in adapters
 
-- [`adapters/stdin/`](adapters/stdin/) — 终端 REPL,无依赖
-- [`adapters/lark/`](adapters/lark/) — 飞书机器人(已实现)
-- [`adapters/telegram/`](adapters/telegram/) — TODO,PR welcome
+- [`adapters/stdin/`](adapters/stdin/) — terminal REPL, zero deps
+- [`adapters/lark/`](adapters/lark/) — Feishu / Lark bot
+- [`adapters/telegram/`](adapters/telegram/) — TODO, PRs welcome
 
 ## FAQ
 
-**Q: 为什么不用 Anthropic API / Agent SDK?**
-A: 那两条路按 token 付费。直接调 `claude -p` 走的是你 Claude.ai 订阅额度,
-个人用基本不要钱。代价是要本地常驻进程(或一台 always-on 的小机器)。
+**Q: Why not the Anthropic API or Agent SDK?**
+A: Both bill per token. Calling `claude -p` directly draws from your Claude.ai
+subscription quota — for personal single-user use, essentially free. The cost:
+you need an always-on local process (or a small server).
 
-**Q: 安全?**
-A: Adapter 默认只响应 `MY_OPEN_ID`(你自己的 ID)发的消息;LLM 工具权限严格限于
-`Read/Glob/Grep`,只能访问知识库目录;`config.sh` 和 `logs/` 已 gitignore。
+**Q: What about security?**
+A: The adapter only responds to `MY_OPEN_ID` (your own ID); LLM tools are
+restricted to `Read / Glob / Grep` against the knowledge directory; `config.sh`
+and `logs/` are gitignored.
 
-**Q: 能多用户用吗?**
-A: 不能。这是个**单人助手**。多用户要在 adapter 加路由 + 在 core 加身份隔离,
-而且 Claude.ai 订阅条款不允许第三方使用你的认证,要走 API 计费。
+**Q: Can multiple users share one bot?**
+A: No — this is a **personal assistant**. Multi-user requires routing in the
+adapter, identity isolation in core, and switching to API key billing per
+Anthropic's terms.
 
-**Q: 准确性?**
-A: LLM 会基于知识库推理,但活动适用条件(节假日、最低消费、用户名单白)很多隐藏
-细节。**关键决策(大额消费)请自己复核**。
+**Q: How accurate is it?**
+A: The LLM reasons from your knowledge base, but real-world conditions (holiday
+rules, minimum spend, eligibility lists) often hide subtle gotchas.
+**Verify any high-stakes recommendation yourself.**
 
 ## License
 
