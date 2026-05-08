@@ -87,6 +87,20 @@ cp config.example.sh config.sh
 
 See [`adapters/lark/README.md`](adapters/lark/README.md).
 
+## Three ways to use the bot
+
+Once wired up to your IM, three input shapes are handled:
+
+| Send to bot | What happens | Latency |
+|-------------|--------------|---------|
+| Plain question — *"Should I use my Young card here?"* | `core/ask.sh` reads the KB, LLM recommends | ~10s |
+| `/note <free text>` | Direct append to `inbox.md` with a timestamp. **No LLM.** Zero hallucination, zero latency | <1s |
+| Image (screenshot of a promo, a receipt, a menu...) | `core/note.sh` downloads the image, Claude reads it via vision, structured fact extracted into `inbox.md`. Sensitive content (IDs, full card numbers, faces) is auto-skipped | ~30–45s |
+
+Inbox entries are intentionally raw — a separate (manual or scheduled) triage
+step files them into the right domain. Capture is fast and trustworthy; filing
+is reviewed.
+
 ## Built-in domains
 
 - [`examples/cards/`](examples/cards/) — credit card decisions
@@ -108,9 +122,11 @@ subscription quota — for personal single-user use, essentially free. The cost:
 you need an always-on local process (or a small server).
 
 **Q: What about security?**
-A: The adapter only responds to `MY_OPEN_ID` (your own ID); LLM tools are
-restricted to `Read / Glob / Grep` against the knowledge directory; `config.sh`
-and `logs/` are gitignored.
+A: The adapter only responds to `MY_OPEN_ID` (your own ID); the read path is
+restricted to `Read / Glob / Grep` against the knowledge directory; the write
+path (image-to-inbox) adds `Edit` only on `inbox.md` (the file is pre-created
+so `Write` is never granted); `config.sh` and `logs/` are gitignored. Images
+are cached under `$XDG_CACHE_HOME/knowit/images/` and never committed.
 
 **Q: Can multiple users share one bot?**
 A: No — this is a **personal assistant**. Multi-user requires routing in the
